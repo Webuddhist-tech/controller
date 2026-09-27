@@ -1,0 +1,275 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Puja overlay</title>
+<!--
+  OBS Browser Source. One per language: overlay.html?lang=bo | en | zh | hi
+  1920x1080, transparent bg. Two lines at a time; follows the controller.
+  The section-title tab is online-only (OBS); the in-person app is separate.
+-->
+<style>
+  /* @import MUST be the first rule in the stylesheet or the browser ignores it
+     (which was leaving Tibetan on a system font that mis-shapes Sanskrit stacks). */
+  @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Jomolhari&family=Noto+Sans+TC&family=Noto+Sans+SC&family=Noto+Sans+Devanagari&family=Noto+Sans+Tibetan&family=Noto+Serif+Tibetan&display=swap");
+  :root {
+    --ink: #000;
+    --panel: rgba(255,255,255,0.70);
+    --sans: "Inter", "Noto Sans", system-ui, sans-serif;
+    --cjk: "Noto Sans TC", "Noto Sans SC", sans-serif;
+    --deva: "Noto Sans Devanagari", sans-serif;
+    --tibetan: "Jomolhari", "Noto Serif Tibetan", "Noto Sans Tibetan", serif;
+  }
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  body { font-family: var(--sans); }
+  #stage { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding: 0 24px 40px; box-sizing: border-box; }
+
+  /* group hugs the panel; the tail-title sits above it and doesn't fade */
+  #group { position: relative; width: auto; max-width: 1200px; }
+  /* English/Chinese two-column overlays hug their two columns so the gap stays tight and centered */
+  body[data-lang="en"] #group, body[data-lang="zh"] #group { width: auto; max-width: 1760px; }
+  body[data-lang="en"] #panel, body[data-lang="zh"] #panel { width: auto; max-width: 1760px; }
+  /* Tibetan: a little wider than the 1200 default so each verse line fits on one line */
+  body[data-lang="bo"] #group, body[data-lang="bo"] #panel { max-width: 1600px; }
+  #sectitle {
+    font-family: var(--sans); font-weight: 600; font-size: 31px; color: var(--ink);
+    padding-bottom: 12px; margin-bottom: 16px; border-bottom: 1.5px solid rgba(0,0,0,.25);
+  }
+  #sectitle:empty { display: none; }
+  body[data-lang="bo"] #sectitle { font-family: var(--tibetan); font-weight: 400; font-size: 36px; }
+  body[data-lang="zh"] #sectitle { font-family: var(--cjk); }
+  body[data-lang="hi"] #sectitle { font-family: var(--deva); }
+  #inner { display: flex; flex-direction: column; justify-content: center; padding: 26px 40px; min-width: 0; }
+
+  /* panel hugs its text: constant side padding, grows/shrinks with line length up to max-width */
+  #panel {
+    width: auto; max-width: 1200px;
+    background: var(--panel); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    border-radius: 14px; box-sizing: border-box; position: relative; overflow: hidden;
+    display: flex; align-items: center; text-align: left; opacity: 0; transition: opacity .35s ease;
+  }
+  #panel.show { opacity: 1; }
+  .line { font-family: var(--sans); font-weight: 600; font-size: 48px; line-height: 1.3; color: var(--ink); overflow-wrap: break-word; text-wrap: balance; }
+  .line + .line { margin-top: 10px; }
+  body[data-lang="bo"] .line { font-family: var(--tibetan); font-weight: 400; font-size: 62px; line-height: 1.6; white-space: nowrap; text-wrap: nowrap; }
+  /* A single long line is allowed to wrap; only multi-line verses are kept one-line-each */
+  body[data-lang="bo"] .line:only-child { white-space: normal; text-wrap: balance; width: max-content; max-width: 1100px; }
+  body[data-lang="zh"] .line { font-family: var(--cjk); }
+  body[data-lang="hi"] .line { font-family: var(--deva); }
+  /* English overlay: two columns (line 1 | line 2), each = transliteration over translation */
+  .cols { display: flex; gap: 40px; justify-content: center; align-items: flex-start; }
+  .col { flex: 0 1 auto; min-width: 0; max-width: 820px; text-align: left; }
+  .cols .col:only-child { max-width: 1400px; }   /* long line -> single centered column */
+  .tr { font-family: var(--sans); font-weight: 600; font-size: 46px; line-height: 1.3; color: var(--ink); overflow-wrap: break-word; }
+  .tl { font-family: var(--sans); font-weight: 500; font-size: 37px; line-height: 1.3; color: var(--ink); opacity: .82; margin-top: 8px; overflow-wrap: break-word; width: 0; min-width: 100%; box-sizing: border-box; }
+  .cols .col:only-child .tr { white-space: normal; }   /* a genuinely long single line may wrap */
+  /* CJK glyphs fill much more of the em box than Latin, so English's 46/37px reads as
+     oversized in Chinese. Use smaller CJK sizes with a gentler transliteration/translation
+     gap than English (heavier CJK translation reads fine close to the transliteration). */
+  body[data-lang="zh"] .tr { font-family: var(--cjk); font-size: 38px; }
+  body[data-lang="zh"] .tl { font-family: var(--cjk); font-size: 34px; }
+  /* Chinese is compact — never wrap it; let each column size to its own longest line
+     (the translation can be longer than the transliteration, which was forcing a wrap). */
+  body[data-lang="zh"] .tr, body[data-lang="zh"] .tl { white-space: nowrap; overflow-wrap: normal; }
+  body[data-lang="zh"] .tl { width: auto; min-width: 0; }
+  #tarawrap { display: none; flex: 0 0 auto; align-self: stretch; position: relative; width: 250px; overflow: hidden; }
+  #tara { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
+  /* Chinese overlays show the whole Tara image (heads were being cropped by cover).
+     The image stays absolutely positioned so the TEXT sets the panel height (no gap,
+     no inflation, like bo/en); render() sets the box width from the panel height and
+     the image's aspect ratio, so the full image fills top-to-bottom, ratio preserved. */
+  body[data-lang="zh"] #tara { object-fit: contain; }
+  #panel.has-img #tarawrap { display: block; }
+  /* Pecha layout (grouped Tibetan): each row = one controller screen, its two lines side by side */
+  body[data-lang="bo"] .line.prow { display: flex; gap: 64px; white-space: nowrap; max-width: none; width: auto; }
+  body[data-lang="bo"] .prow .pada { white-space: nowrap; }
+  /* very long single lines (the hundred-syllable mantra) use the full width: fewer rows, same size */
+  body[data-lang="bo"] .line.xwide:only-child { max-width: 1760px; }
+  /* pecha rows are wide: let the Tibetan panel use nearly the full 1920 frame */
+  body.grp[data-lang="bo"] #group, body.grp[data-lang="bo"] #panel { max-width: 1840px; }
+  /* Title cards (Break time): same panel, one large centered title */
+  #panel.titlecard { text-align: center; }
+  #panel.titlecard #inner { padding: 34px 64px; }
+  .ttl { font-family: var(--sans); font-weight: 600; font-size: 64px; line-height: 1.3; color: var(--ink); text-wrap: balance; }
+  body[data-lang="bo"] .ttl { font-family: var(--tibetan); font-weight: 400; font-size: 78px; line-height: 1.6; }
+  body[data-lang="zh"] .ttl { font-family: var(--cjk); font-size: 60px; }
+  .placeholder { opacity: .3; font-style: italic; font-weight: 400; }
+  .conn { position: absolute; top: 10px; right: 12px; width: 7px; height: 7px; border-radius: 50%; background: #c0392b; opacity: 0; transition: opacity .3s; }
+  .conn.bad { opacity: .7; }
+</style>
+
+<div id="stage">
+  <div id="group">
+    <div id="panel"><div class="conn" id="conn"></div><div id="inner"><div id="sectitle"></div><div id="lines"></div></div><div id="tarawrap"><img id="tara" alt=""></div></div>
+  </div>
+</div>
+
+<script src="sequence.js"></script>
+<script>
+  const lang = new URLSearchParams(location.search).get("lang") || "en";
+  document.body.dataset.lang = lang;
+  const el = (id) => document.getElementById(id);
+  let SEQ = null, pending = null, _renderT = null;
+  // Tibetan only (default): shows each controller screen together with the next screen of
+  // the same verse, so the Tibetan overlay changes half as often. ?lines=2 turns it off.
+  // The controller, WebSocket and app emits are untouched — this only changes what's drawn.
+  const GROUP = lang === "bo" && +new URLSearchParams(location.search).get("lines") !== 2;
+  if (GROUP) document.body.classList.add("grp");
+  let _shown = null;   // group key currently on screen (skip the fade when it's unchanged)
+  const _split = new Set();   // verses whose pecha rows didn't fit: shown one screen at a time
+  function groupOf(index) {
+    const ch = SEQ.chunks;
+    if (ch[index].boSingle || _split.has(ch[index].vId)) return { key: index, members: [ch[index]] };   // bo_single / didn't fit
+    const same = (a, b) => a && b && a.vId === b.vId && a.sIdx === b.sIdx;
+    let s0 = index, e0 = index;
+    while (same(ch[s0 - 1], ch[index])) s0--;
+    while (same(ch[e0 + 1], ch[index])) e0++;
+    // Pair screens two by two. If the verse has an odd number of screens and ends on a
+    // lone line, pair from the end instead (first screen alone), so a 5-line verse shows
+    // 2 + 3 lines rather than 4 + a single leftover line.
+    const shift = (e0 - s0 + 1) % 2 === 1 && (ch[e0].lines.bo || []).length === 1 ? 1 : 0;
+    const pos = index - s0;
+    if (shift && pos === 0) return { key: s0, members: [ch[s0]] };
+    const start = s0 + shift + Math.floor((pos - shift) / 2) * 2;
+    const members = [ch[start]];
+    if (start + 1 <= e0) members.push(ch[start + 1]);
+    return { key: start, members };
+  }
+
+  function render(index, hidden) {
+    if (!SEQ) return;
+    const c = SEQ.chunks[index];
+    if (!c) return;
+    const panel = el("panel");
+    const grp = GROUP && c.kind !== "title" ? groupOf(index) : null;
+    const key = hidden ? null : (grp ? "g" + grp.key : "i" + index);
+    if (GROUP && key && key === _shown) return;   // same Tibetan screen: leave it up, no flicker
+    _shown = key;
+    panel.classList.remove("show");
+    // Cancel any pending swap so a rapid advance can't flash an intermediate chunk.
+    clearTimeout(_renderT);
+    if (hidden) return;   // "Hide overlays": fade out and stay blank (position is kept)
+    _renderT = setTimeout(() => {
+      // Title card (Break time): one large centered line in this language
+      if (c.kind === "title") {
+        el("sectitle").textContent = "";
+        const t = (c.lines[lang] || [])[0] || (c.lines.en || [])[0] || "";
+        el("lines").innerHTML = `<div class="ttl">${t}</div>`;
+        panel.classList.add("titlecard");
+        panel.classList.remove("has-img"); el("tarawrap").style.width = "";
+        panel.classList.add("show");
+        return;
+      }
+      panel.classList.remove("titlecard");
+      // Section title updates together with the content, after the fade-out, so the
+      // tab and lines never show a mismatched (half-updated) frame.
+      const _tt = c.vTitle || c.sTitle || {};
+      const _order = lang === "zh" ? [_tt.zh, _tt.bo] : lang === "bo" ? [_tt.bo, _tt.en] : [_tt.en, _tt.bo];
+      el("sectitle").textContent = _order.find(Boolean) || "";
+      let html = "";
+      if (lang === "en" || lang === "zh") {
+        // two columns: line 1 | line 2; each column = transliteration over translation
+        const top = (lang === "zh" ? c.tr_zh : c.tr) || [];
+        const bot = c.lines[lang] || [];
+        const cols = Math.max(top.length, bot.length);
+        const cells = [];
+        for (let i = 0; i < cols; i++) {
+          const t = top[i] || "", e = bot[i] || "";
+          if (!t && !e) continue;
+          cells.push(`<div class="col"><div class="tr">${t}</div>${e ? `<div class="tl">${e}</div>` : ""}</div>`);
+        }
+        html = cells.length ? `<div class="cols">${cells.join("")}</div>` : `<div class="line placeholder">···</div>`;
+      } else {
+        // Jomolhari (needed for correct Sanskrit stacking) mis-renders the mantra-
+        // highlight marks U+0F35/U+0F37 as detached floating circles. Strip them for the
+        // overlay only — they're decorative (they mark the embedded mantra syllables) and
+        // remain in the data and the operator's controller.
+        const _clean = (s) => s.replace(/[༵༷]/g, "");
+        // grouped (pecha layout): one row per controller screen, its lines side by side
+        //   line 1   line 2
+        //   line 3   line 4
+        // A screen with a single (long) line stays a normal line so it can wrap.
+        if (grp) {
+          const rows = grp.members.map((m) => (m.lines[lang] || []).map(_clean).filter(Boolean)).filter((r) => r.length);
+          html = rows.length
+            ? rows.map((r) => r.length > 1
+                ? `<div class="line prow">${r.map((l) => `<span class="pada">${l}</span>`).join("")}</div>`
+                : `<div class="line${r[0].length > 120 ? " xwide" : ""}">${r[0]}</div>`).join("")
+            : `<div class="line placeholder">···</div>`;
+        } else {
+          const lines = (c.lines[lang] || []).map(_clean).filter(Boolean);
+          html = lines.length
+            ? lines.map((l) => `<div class="line${l.length > 120 ? " xwide" : ""}">${l}</div>`).join("")
+            : `<div class="line placeholder">···</div>`;
+        }
+      }
+      el("lines").innerHTML = html;
+      // Tibetan single long line wraps (CSS above); hug the box to the longest wrapped
+      // line so it doesn't leave the fixed-width empty space on the right.
+      if (lang === "bo") {
+        const _ls = el("lines").querySelectorAll(".line");
+        if (_ls.length === 1 && !_ls[0].classList.contains("prow")) {
+          const _d = _ls[0];
+          _d.style.width = "";
+          const _r = document.createRange(); _r.selectNodeContents(_d);
+          const _rects = [..._r.getClientRects()].filter((x) => x.width > 2);
+          if (_rects.length > 1) {   // only when it actually wrapped
+            _d.style.width = Math.ceil(Math.max(..._rects.map((x) => x.width))) + 2 + "px";
+          }
+        }
+      }
+      const _im = el("tara");
+      if (c.image) {
+        if (_im.getAttribute("src") !== c.image) _im.setAttribute("src", c.image);
+        panel.classList.add("has-img");
+        if (lang === "zh") sizeZhTara();
+      } else { panel.classList.remove("has-img"); el("tarawrap").style.width = ""; }
+      // Safety net: if a pecha row is wider than the panel, split this verse into separate
+      // overlays (one controller screen each, lines stacked) and redraw — never clip or wrap.
+      if (grp && grp.members.length > 1) {
+        const pr = panel.getBoundingClientRect();
+        const over = [...el("lines").querySelectorAll(".prow")].some((r) => r.scrollWidth > r.clientWidth + 1 || r.getBoundingClientRect().right > pr.right + 1);
+        if (over) {
+          _split.add(c.vId); _shown = "g" + index;
+          el("lines").innerHTML = (c.lines[lang] || []).map((l) => `<div class="line">${l.replace(/[༵༷]/g, "")}</div>`).join("");
+        }
+      }
+      panel.classList.add("show");
+    }, 110);
+  }
+
+  // Chinese: the Tara image fills the panel top-to-bottom (height = the text-driven
+  // panel height, no gap) and takes its width from the image's own aspect ratio, so the
+  // whole image shows without cropping and without inflating the panel (it stays absolute).
+  function sizeZhTara() {
+    const wrap = el("tarawrap"), im = el("tara"), panel = el("panel");
+    const setW = () => {
+      const asp = (im.naturalWidth && im.naturalHeight) ? im.naturalWidth / im.naturalHeight : 0.75;
+      const h = panel.getBoundingClientRect().height;
+      if (h) wrap.style.width = Math.round(h * asp) + "px";
+    };
+    if (im.complete && im.naturalWidth) setW(); else im.onload = setW;
+  }
+
+  let ws;
+  function connect() {
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    try { ws = new WebSocket(`${proto}://${location.host}`); }
+    catch (e) { el("conn").classList.add("bad"); setTimeout(connect, 1500); return; }
+    ws.onopen = () => el("conn").classList.remove("bad");
+    ws.onclose = () => { el("conn").classList.add("bad"); setTimeout(connect, 1500); };
+    ws.onerror = () => el("conn").classList.add("bad");
+    ws.onmessage = (e) => {
+      let m; try { m = JSON.parse(e.data); } catch { return; }
+      if (m.type === "state") { const h = m.hidden || m.set === false; if (SEQ) render(m.index, h); else pending = { ...m, hidden: h }; }
+    };
+  }
+  async function load(tries = 20) {
+    for (let i = 0; i < tries; i++) {
+      try {
+        SEQ = await loadSequence();
+        if (pending) { render(pending.index, pending.hidden); pending = null; }   // else wait for the server's state
+        return;
+      } catch (e) { await new Promise((r) => setTimeout(r, 1000)); }
+    }
+  }
+  connect(); load();
+</script>

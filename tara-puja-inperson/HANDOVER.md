@@ -1,3 +1,5 @@
+> **Historical note:** this handover (Sep 23) describes the original *combined* system, in which one controller drove both the OBS overlays and the app. The system has since been split: `tara-puja-overlay/` is OBS overlays only, and this folder (`tara-puja-inperson/`) handles app sync. The WeBuddhist recitation API details below still apply to this folder.
+
 # Tara Puja — Controller + OBS Overlay + App Sync — Handover
 
 Hand this to a fresh agent to continue the work. It captures the whole system, how to run it, the WeBuddhist recitation API we reverse-engineered, current state, and what's left.

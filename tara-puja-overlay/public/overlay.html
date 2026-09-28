@@ -4,7 +4,7 @@
 <!--
   OBS Browser Source. One per language: overlay.html?lang=bo | en | zh | hi
   1920x1080, transparent bg. Two lines at a time; follows the controller.
-  The section-title tab is online-only (OBS); the in-person app is separate.
+  Streaming / OBS only. The in-person app sync is the separate tara-puja-inperson version.
 -->
 <style>
   /* @import MUST be the first rule in the stylesheet or the browser ignores it
@@ -110,7 +110,7 @@
   let SEQ = null, pending = null, _renderT = null;
   // Tibetan only (default): shows each controller screen together with the next screen of
   // the same verse, so the Tibetan overlay changes half as often. ?lines=2 turns it off.
-  // The controller, WebSocket and app emits are untouched — this only changes what's drawn.
+  // The controller and WebSocket are untouched — this only changes what's drawn.
   const GROUP = lang === "bo" && +new URLSearchParams(location.search).get("lines") !== 2;
   if (GROUP) document.body.classList.add("grp");
   let _shown = null;   // group key currently on screen (skip the fade when it's unchanged)

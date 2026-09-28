@@ -1,6 +1,6 @@
-// Puja overlay server: serves the pages and keeps one shared "current position"
-// that the controller sets and every language overlay listens to. OBS output only —
-// the WeBuddhist app is driven by the separate in-person controller (../tara-puja-inperson).
+// Puja overlay server (streaming / OBS only): serves the pages and keeps one shared
+// "current position" that the controller sets and every language overlay listens to.
+// It does not talk to the WeBuddhist app — that is the separate in-person version.
 //
 // Run:  node server.js       (needs the 'ws' package: npm install ws)
 // Then: controller  -> http://localhost:8080/controller.html
@@ -67,5 +67,5 @@ wss.on("connection", (ws) => {
 server.listen(PORT, () => {
   console.log(`Puja overlay running:`);
   console.log(`  Controller: http://localhost:${PORT}/controller.html`);
-  console.log(`  Overlays:   http://localhost:${PORT}/overlay.html?lang=en  (also zh, hi, bo)`);
+  console.log(`  Overlays:   http://localhost:${PORT}/overlay.html?lang=bo  (also en, zh)`);
 });

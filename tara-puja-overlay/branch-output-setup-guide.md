@@ -35,7 +35,7 @@ OBS (one instance)
 
 **Why this is the right shape:** within a language it's the *same* video going to multiple channels, which is exactly what a cloud multistreamer is for. You upload **3 streams** from the venue instead of 7 — Castr does the multiplication — so the uplink is the win, not extra hardware.
 
-> This is the **online-viewer** path only. In-person attendees use the app's instant text-scroll, driven by the separate in-person controller (`../tara-puja-inperson/` → `api.webuddhist.com`). It is unaffected by OBS or Castr. Video latency (including Castr's extra cloud hop) does not matter for it.
+> This is the **online-viewer** path only. In-person attendees use the WeBuddhist app's text-scroll, which is driven by the **separate** `tara-puja-inperson` controller, not by this one. It's unaffected by OBS or Castr.
 
 ---
 
@@ -187,7 +187,7 @@ Learn Castr incrementally with **one** language before wiring all three. Each st
 2. **Prove one destination.** Add **one** YouTube channel as a destination on that Castr stream. Use an **unlisted/private** test broadcast. Confirm video *and* audio arrive on that channel (watch on your phone). This also re-checks the audio routing (Custom Audio Source → a fed track, Step 4).
 3. **Prove fan-out.** Add a **second** destination to the *same* Castr stream (the other channel, or a second unlisted test target). Confirm both light up from the one OBS upload. This is the whole point of Castr — see it work once.
 4. **Prove 3 concurrent.** Start the English and Chinese outputs too (each to its own Castr stream). Confirm all three run together and each carries the right overlay language. Watch the venue upload — it should be ~3 streams' worth, not 7.
-5. **Prove the controller.** Advance `controller.html`; confirm all overlays move together. 
+5. **Prove the controller.** Advance `controller.html`; confirm all overlays move together.
 6. **Note the numbers you'll reuse:** which Castr stream = which language, each stream's ingest, and each channel's destination. Screenshot the Castr dashboard layout.
 
 > Time this dry run end-to-end once; a multi-hour puja is not the moment to first meet Castr's UI.

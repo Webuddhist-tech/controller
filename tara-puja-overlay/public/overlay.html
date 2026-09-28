@@ -110,7 +110,7 @@
   let SEQ = null, pending = null, _renderT = null;
   // Tibetan only (default): shows each controller screen together with the next screen of
   // the same verse, so the Tibetan overlay changes half as often. ?lines=2 turns it off.
-  // The controller, WebSocket and app emits are untouched — this only changes what's drawn.
+  // The controller and WebSocket are untouched — this only changes what's drawn.
   const GROUP = lang === "bo" && +new URLSearchParams(location.search).get("lines") !== 2;
   if (GROUP) document.body.classList.add("grp");
   let _shown = null;   // group key currently on screen (skip the fade when it's unchanged)

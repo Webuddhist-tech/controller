@@ -10,7 +10,7 @@
   Operator screen (Tibetan). Left = sections. Right = every screen of the
   current section, current one highlighted; tap any to jump there instantly
   (for when the umdze skips or you lose your place). ← / → / Space also advance.
-  Rubrics (ritual instructions) show here only — never on the overlays.
+  Rubrics (ritual instructions) show here only — never in the app.
 -->
 <style>
   :root {
@@ -107,7 +107,6 @@
 <script>
   const el = (id) => document.getElementById(id);
   let SEQ = null, index = 0, ws = null, curSec = -1;
-  let hidden = false;     // overlays blanked (announcements) — position is kept
   let resume = null;      // sadhana position to return to after Break / Tea
   let started = false;    // this page has a position of its own (vs. a fresh load)
   const HINT = "Tap any line to jump · ← / → / Space";
@@ -125,7 +124,7 @@
           if (tids[lang] && sids[lang]) cues.push({ lang, text_id: tids[lang], segment_id: sids[lang] });
         }
       }
-      ws.send(JSON.stringify({ type: "set", index, cues, hidden }));
+      ws.send(JSON.stringify({ type: "set", index, cues }));
     }
     paint();
   }
@@ -264,7 +263,7 @@
         // mid-event), otherwise start at the top of the sadhana. Never lands on Break.
         if (!started) { const t = SEQ.sections.find((s) => !s.anytime); index = t ? t.firstChunk : 0; started = true; }
         send();
-      } else { index = m.index; started = true; paint(); }   // no overlays here: never hides
+      } else { index = m.index; started = true; paint(); }
     } };
   }
 

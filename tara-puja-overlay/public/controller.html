@@ -117,20 +117,7 @@
   const HINT = "Tap any line to jump · ← / → / Space · H hide";
 
   function send() {
-    const c = SEQ.chunks[index];
-    if (ws && ws.readyState === 1) {
-      // Emit one position per mapped language edition (bo, en, …) so every language's
-      // app readers auto-scroll — each edition is a separate library text with its own ids.
-      const cues = [];
-      const tids = (c && c.textIds) || (c && c.textId ? { bo: c.textId } : null);
-      const sids = (c && c.segmentIds) || (c && c.segmentId ? { bo: c.segmentId } : null);
-      if (tids && sids) {
-        for (const lang of Object.keys(sids)) {
-          if (tids[lang] && sids[lang]) cues.push({ lang, text_id: tids[lang], segment_id: sids[lang] });
-        }
-      }
-      ws.send(JSON.stringify({ type: "set", index, cues, hidden }));
-    }
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "set", index, hidden }));
     paint();
   }
   // All moves go through here. Entering Break/Tea from the sadhana remembers where we were;

@@ -13,10 +13,9 @@ const PORT = process.env.PORT || 8080;
 const PUBLIC = path.join(__dirname, "public");
 
 // Shared state: which step of the sequence, and which pass of the Taras loop.
-// hidden = overlays blanked (only when the operator presses Hide); position is kept.
-// set = a controller has published since start (overlays stay blank until then, so a
-// fresh server never flashes screen 0 — even an older controller clears this by moving).
-let state = { index: 0, pass: 1, hidden: false, set: false };
+// set = a controller has published since start (until then a connecting controller
+// publishes its own position instead of adopting screen 0).
+let state = { index: 0, pass: 1, set: false };
 
 // WeBuddhist live-recitation emit (HTTP). The shared secret stays here, never in the browser.
 const WB_HOST = process.env.WB_HOST || "api.webuddhist.com";
@@ -77,8 +76,8 @@ const server = http.createServer((req, res) => {
   if (!full.startsWith(PUBLIC)) { res.writeHead(403); return res.end("Forbidden"); }
   fs.readFile(full, (err, data) => {
     if (err) { res.writeHead(404); return res.end("Not found"); }
-    // no-store: OBS/CEF caches aggressively; without this, edits to content.json
-    // and the overlay pages don't show up on a plain Refresh.
+    // no-store: without this, edits to content.json and the controller page
+    // don't show up on a plain Refresh.
     res.writeHead(200, { "Content-Type": MIME[path.extname(full)] || "application/octet-stream", "Cache-Control": "no-store" });
     res.end(data);
   });
@@ -94,23 +93,17 @@ function broadcast() {
 }
 
 wss.on("connection", (ws) => {
-  // Send current state immediately so a freshly-loaded overlay catches up.
+  // Send current state immediately so a freshly-loaded controller catches up.
   ws.send(JSON.stringify({ type: "state", ...state }));
   ws.on("message", (raw) => {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
     if (msg.type === "set" && typeof msg.index === "number") {
       state = { ...state, index: msg.index, pass: msg.pass || 1, set: true };
-      if (typeof msg.hidden === "boolean") state.hidden = msg.hidden;
       broadcast();
       // one or more cues (one per language edition); tolerate the old single-cue shape
       const cues = Array.isArray(msg.cues) ? msg.cues : (msg.cue ? [msg.cue] : []);
-      scheduleEmit(cues, msg.index);   // debounced app POSTs (overlays already updated above)
-    }
-    // Hide/show overlays without moving the position — never emits to the app.
-    if (msg.type === "hide" && typeof msg.hidden === "boolean") {
-      state = { ...state, hidden: msg.hidden };
-      broadcast();
+      scheduleEmit(cues, msg.index);   // debounced app POSTs (other controllers already updated above)
     }
   });
 });

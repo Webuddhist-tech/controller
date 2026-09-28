@@ -46,10 +46,6 @@ async function loadSequence() {
           gi: chunks.length,
           sIdx: si, sId: sec.id, sTitle: sec.title, anytime: !!sec.anytime,
           vId: v.id, kind: v.kind,
-          textId: sec.app ? sec.app.text_id : null,   // bo recitation text id (back-compat)
-          textIds: sec.app ? (sec.app.text_ids || (sec.app.text_id ? { bo: sec.app.text_id } : null)) : null,  // per-language recitation text ids
-          segmentId: v.segment_id || null,
-          segmentIds: v.segment_ids || (v.segment_id ? { bo: v.segment_id } : null),  // per-language segment ids {bo,en,…}
           reference: v.reference || null,
           rubric: start === 0 && v.rubric ? v.rubric.bo : "",  // operator-only, first screen
           vStart: start === 0,
